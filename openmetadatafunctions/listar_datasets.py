@@ -21,7 +21,7 @@ def obter_token(email: str, senha: str) -> Optional[str]:
         response.raise_for_status()
         return response.json().get("token")
     except requests.exceptions.RequestException as e:
-        print(f"❌ Erro ao fazer login: {str(e)}")
+        print(f" Erro ao fazer login: {str(e)}")
         return None
 
 def listar_datasets(token: str, limit: int = 100, offset: int = 0) -> bool:
@@ -44,26 +44,26 @@ def listar_datasets(token: str, limit: int = 100, offset: int = 0) -> bool:
         datasets = data.get("data", [])
         
         if not datasets:
-            print("ℹ️ Nenhum dataset encontrado.")
+            print("ℹ Nenhum dataset encontrado.")
             return False
             
-        print(f"📊 Total de datasets: {data.get('paging', {}).get('total', len(datasets))}")
-        print("📋 Lista de datasets:")
+        print(f" Total de datasets: {data.get('paging', {}).get('total', len(datasets))}")
+        print(" Lista de datasets:")
         
         for dataset in datasets:
-            print(f"✅ {dataset.get('name')} - {dataset.get('fullyQualifiedName')}")
+            print(f" {dataset.get('name')} - {dataset.get('fullyQualifiedName')}")
             
         return True
         
     except requests.exceptions.RequestException as e:
-        print(f"❌ Erro ao listar datasets: {str(e)}")
+        print(f" Erro ao listar datasets: {str(e)}")
         if hasattr(e, 'response') and e.response:
             print(f"Detalhes do erro: {e.response.text}")
         return False
 
 if __name__ == "__main__":
     if token := obter_token(EMAIL, PASSWORD):
-        print("🔑 Token obtido com sucesso!")
+        print(" Token obtido com sucesso!")
         listar_datasets(token)
     else:
         print("Falha na autenticação. Verifique suas credenciais.")
