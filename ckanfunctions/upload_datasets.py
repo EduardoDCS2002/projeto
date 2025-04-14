@@ -6,7 +6,7 @@ API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJtSDF4V2pmQkEtMXRJZXNM
 DATA_GOV_API = "https://catalog.data.gov/api/3/action/"
 
 def search_datagov(query="", limit=100):
-    """Search data.gov for datasets matching a query."""
+    # Search data.gov for datasets matching a query
     try:
         response = requests.get(
             f"{DATA_GOV_API}package_search",
@@ -24,7 +24,7 @@ def search_datagov(query="", limit=100):
         return []
 
 def sync_all_from_datagov(query="", limit=10):
-    """Sync all datasets from data.gov matching a query to local CKAN."""
+    # Sync all datasets from data.gov matching a query to local CKAN
     datasets = search_datagov(query, limit)
     if not datasets:
         print("No datasets found on data.gov or search failed.")

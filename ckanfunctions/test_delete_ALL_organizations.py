@@ -5,7 +5,7 @@ CKAN_URL = "http://localhost:5000/api/3/action/"
 API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJtSDF4V2pmQkEtMXRJZXNMRGZTaEk4U0dPX0JfdEtaVi1jSHBIeVJfcTJRIiwiaWF0IjoxNzQ0Mjk4MTIyfQ.7yBFMAk28YDFdq39PHnHPPJDaQxtRWxmKsiU0p4x6cc"
 
 def list_all_datasets(ckan_url, orgname, api_key=None, include_private=True):
-    """List all datasets even hidden."""
+    #List all datasets even hidden
     params = {
         "organization": orgname,
         "rows": 1000,  # Max allowed by CKAN
@@ -26,7 +26,7 @@ def list_all_datasets(ckan_url, orgname, api_key=None, include_private=True):
     return [pkg["name"] for pkg in data["result"]["results"]]
 
 def delete_dataset(ckan_url, dataset_id_or_name, api_key): # It was necessary to fix an old error
-    """Delete a dataset from CKAN."""
+    # Delete a dataset from CKAN
     try:
         response = requests.post(
             urljoin(ckan_url, "package_delete"),
@@ -49,7 +49,7 @@ def delete_dataset(ckan_url, dataset_id_or_name, api_key): # It was necessary to
 
 
 def get_all_organizations():
-    """Get all organizations including deleted ones"""
+    # Get all organizations including deleted ones
     response = requests.post(
         f"{CKAN_URL}organization_list",
         headers={"Authorization": API_KEY},
@@ -58,7 +58,7 @@ def get_all_organizations():
     return response.json().get("result", [])
 
 def purge_organization(name):
-    """Completely remove an organization"""
+    # Completely remove an organization
     response = requests.post(
         f"{CKAN_URL}organization_purge",
         headers={"Authorization": API_KEY},
@@ -67,7 +67,7 @@ def purge_organization(name):
     return response.json()
 
 def purge_all_organizations():
-    """Purge all organizations from the system"""
+    # Purge all organizations from the system
     orgs = get_all_organizations()
     print(f"Found {len(orgs)} organizations to purge")
     

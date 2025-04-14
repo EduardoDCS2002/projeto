@@ -2,7 +2,7 @@ import requests
 from urllib.parse import urljoin
 
 def list_all_datasets(ckan_url, api_key=None, include_private=True):
-    """List all datasets even hidden."""
+    # List all datasets even hidden
     params = {
         "rows": 1000,  # Max allowed by CKAN
         "include_private": include_private
@@ -22,7 +22,7 @@ def list_all_datasets(ckan_url, api_key=None, include_private=True):
     return [pkg["name"] for pkg in data["result"]["results"]]
 
 def delete_dataset(ckan_url, dataset_id_or_name, api_key): # It was necessary to fix an old error
-    """Delete a dataset from CKAN."""
+    # Kill a dataset from CKAN
     try:
         response = requests.post(
             urljoin(ckan_url, "package_delete"),
@@ -45,7 +45,7 @@ def delete_dataset(ckan_url, dataset_id_or_name, api_key): # It was necessary to
 # Get and Post
 
 def ckan_get(ckan_url, action, api_key=None, params=None):
-    """Generic GET request for CKAN API"""
+    # Generic GET request for CKAN API
     url = ckan_url + action
     headers = {"Authorization": api_key}
     try:
@@ -59,7 +59,7 @@ def ckan_get(ckan_url, action, api_key=None, params=None):
         raise ValueError(f"CKAN API ({action}) failed: {str(e)}")
 
 def ckan_post(ckan_url, action, json_data, api_key=None):
-    """Generic POST request for CKAN API"""
+    # Generic POST request for CKAN API
     url = ckan_url + action
     headers = {"Authorization": api_key}
     try:
@@ -74,28 +74,28 @@ def ckan_post(ckan_url, action, json_data, api_key=None):
 
 # Functions that need Get
 def get_package_list(ckan_url, limit=10, api_key=None):
-    """List all datasets (packages) in CKAN instance"""
+    # List all datasets (packages) in CKAN instance
     return ckan_get(ckan_url, "package_list", api_key, {"limit": limit})
 
 def get_organization_list(ckan_url, api_key=None):
-    """List all organizations"""
+    # List all organizations
     return ckan_get(ckan_url, "organization_list", api_key)
 
 def get_group_list(ckan_url, api_key=None):
-    """List all groups"""
+    # List all groups
     return ckan_get(ckan_url, "group_list", api_key)
 
 def get_tag_list(ckan_url, api_key=None):
-    """List all tags"""
+    # List all tags
     return ckan_get(ckan_url, "tag_list", api_key)
 
 def get_package_show(ckan_url, dataset_name, api_key=None):
-    """Get full metadata for a specific dataset"""
+    # Get full metadata for a specific dataset
     
     return ckan_get(ckan_url, "package_show", api_key, {"id": dataset_name})
 
 def get_resource_show(ckan_url, resource_id, api_key=None):
-    """Get metadata for a specific resource"""
+    # Get metadata for a specific resource
     return ckan_get(ckan_url, "resource_show", api_key, {"id": resource_id})
 
 # Check if entity exists or create it

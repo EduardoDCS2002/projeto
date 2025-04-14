@@ -13,7 +13,7 @@ dataset_dict = {
 # Define the API endpoint for creating a dataset
 url = 'http://localhost:5000/api/action/package_create'
 
-# Replace '***' with your API key
+
 headers = {
     'Authorization': "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJqNnFrQ3dhcVotM1dVLXEyYm9WbDNfRjQ1Z2lBVXBFT3BvRmlrYVFudFEwIiwiaWF0IjoxNzQzNTMyNTk1fQ.kp_u89vzmpXrMqJEDTQc6a3xIkbW7lhGTP5C91uyCEg",
     'Content-Type': 'application/json'

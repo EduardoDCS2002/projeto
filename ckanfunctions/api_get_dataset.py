@@ -7,7 +7,7 @@ dataset_id = "crime-data-from-2020-to-present"
 # CKAN API endpoint for data.gov
 data_gov_api_url = "https://catalog.data.gov/api/3/action/package_show"
 
-# Your CKAN instance details
+# My CKAN instance details
 ckan_api_url = "http://localhost:5000/api/3/action/resource_create"
 api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJqNnFrQ3dhcVotM1dVLXEyYm9WbDNfRjQ1Z2lBVXBFT3BvRmlrYVFudFEwIiwiaWF0IjoxNzQzNTMyNTk1fQ.kp_u89vzmpXrMqJEDTQc6a3xIkbW7lhGTP5C91uyCEg"
 ckan_dataset_id = "api_created_dataset"
@@ -21,7 +21,7 @@ if response.status_code == 200:
 
     # Extract resources (data files)
     resources = dataset_metadata["result"]["resources"]
-    print("Resources:", resources)  # See the files information
+    print("Resources:", resources)  
 
     # Fetch the existing dataset metadata from your CKAN instance
     package_show_url = f"{ckan_api_url.replace('resource_create', 'package_show')}"
