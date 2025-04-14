@@ -21,3 +21,8 @@ docker compose -f docker-compose-postgres.yml down
 
 # Start fresh
 docker compose -f docker-compose-postgres.yml up -d
+
+## Ambiente virtual (para rodar os scripts) ##
+python3 -m venv venv      # Criar o ambiente virtual
+
+source venv/bin/activate  # Entrar
