@@ -1,12 +1,24 @@
-# pip install requests python-dotenv
-
 import requests
 import json
+import base64
 from urllib.parse import urljoin
 
 # Configurações iniciais
-BASE_URL = "http://localhost:8585/api/v1"
-AUTH_TOKEN = "eyJraWQiOiJHYjM4OWEtOWY3Ni1nZGpzLWE5MmotMDI0MmJrOTQzNTYiLCJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJvcGVuLW1ldGFkYXRhLm9yZyIsInN1YiI6ImFkbWluIiwicm9sZXMiOlsiQWRtaW4iXSwiZW1haWwiOiJhZG1pbkBvcGVuLW1ldGFkYXRhLm9yZyIsImlzQm90IjpmYWxzZSwidG9rZW5UeXBlIjoiT01fVVNFUiIsImlhdCI6MTc0NDcxMTY2MSwiZXhwIjoxNzQ0NzE1MjYxfQ.aWdP_7vY2MaC7-7KBuEJIdL9XCVOYbE54MSFZgCBuGci55qNd0BBTBvj0sFk3JYt20TWzLt2pCT2PPz-O1v9jCCXkySoz4hVC_qShhE7gB4P8Yjz_BrZuARr-nWCqroKVfok0DOH30nNfkkLrgXHj76sVbuY2ZR_5e5_gU-lB9Tw-YGJ4yKNzFEvRMOU-rFul0ptmPquU_qHDkfKBk2VY_YxkdgVSs2I0lcLKuRITL-NYCz8yDYlIWYSHpUZYM-zH3tdSiw0YQILsqsHhH1irRpgb5p5KpeMkcGkcbn_hQK0Lc7lWAmjVCD9tFzs3os9-Gjz5-Gk2QKXr9aCNiom4w"
+BASE_URL = "http://localhost:8585/api/v1/"
+
+# get the AUTH_TOKEN for any machine running this
+urlgettoken = BASE_URL + "users/login"
+
+headers = {
+    "Content-Type": "application/json"
+}
+encoded_password = base64.b64encode("admin".encode('utf-8')).decode('utf-8')
+payload = { # assuming you are only using the admin account for openmetadata
+    "email": "admin@open-metadata.org",
+    "password": encoded_password
+}
+
+AUTH_TOKEN = requests.post(urlgettoken, headers=headers, json=payload).json()["accessToken"]
 
 HEADERS = {
     "Content-Type": "application/json",
@@ -24,38 +36,37 @@ def fazer_requisicao(method, endpoint, **kwargs):
 def listar_entidades(tipo_entidade, limit=100, campos=None):
     params = {"limit": limit}
     if campos:
-        params["fields"] = ",".join(campos)
-    return fazer_requisicao("GET", f"/{tipo_entidade}", params=params)
+        params = params + campos
+    return fazer_requisicao("GET", tipo_entidade, params=params)
 
 # Obter detalhes de uma entidade
 def obter_entidade(tipo_entidade, id_entidade, campos=None):
-    params = {}
     if campos:
-        params["fields"] = ",".join(campos)
-    return fazer_requisicao("GET", f"/{tipo_entidade}/{id_entidade}", params=params)
+        params = campos
+    return fazer_requisicao("GET", f"{tipo_entidade}/{id_entidade}", params=params)
 
 # Criar nova entidade
 def criar_entidade(tipo_entidade, dados):
-    return fazer_requisicao("POST", f"/{tipo_entidade}", json=dados)
+    return fazer_requisicao("POST", tipo_entidade, json=dados)
 
 # Atualizar entidade
 def atualizar_entidade(tipo_entidade, id_entidade, dados):
-    return fazer_requisicao("PUT", f"/{tipo_entidade}/{id_entidade}", json=dados)
+    return fazer_requisicao("PUT", f"{tipo_entidade}/{id_entidade}", json=dados)
 
 # Destruir entidade
 def eliminar_entidade(tipo_entidade, id_entidade):
-    return fazer_requisicao("DELETE", f"/{tipo_entidade}/{id_entidade}")
+    return fazer_requisicao("DELETE", f"{tipo_entidade}/{id_entidade}")
 
 # Procurar entidades por termo
 def procurar_entidades(termo, tipo_entidade=None):
     params = {"q": termo}
     if tipo_entidade:
         params["entityType"] = tipo_entidade
-    return fazer_requisicao("GET", "/search/query", params=params)
+    return fazer_requisicao("GET", "search/query", params=params)
 
 # Listar serviços
 def listar_servicos(tipo_servico):
-    return fazer_requisicao("GET", f"/services/{tipo_servico}")
+    return fazer_requisicao("GET", f"services/{tipo_servico}")
 
 # Criar ou atualizar tabela
 def criar_ou_atualizar_tabela(servico_bd, banco, schema, dados_tabela):
@@ -64,7 +75,7 @@ def criar_ou_atualizar_tabela(servico_bd, banco, schema, dados_tabela):
         "database": banco,
         "databaseSchema": schema
     })
-    return fazer_requisicao("POST", "/tables", json=dados_tabela)
+    return fazer_requisicao("POST", "tables", json=dados_tabela)
 
 # Execução principal
 if __name__ == "__main__":
