@@ -91,5 +91,7 @@ if __name__ == "__main__":
 
     # Listar serviços de BD
     print("\n--Listar serviços de BD--\n")
-    servicos = listar_servicos("database")
+    servicos = listar_servicos("databaseServices")
     print("Serviços encontrados:", json.dumps(servicos, indent=2))
+
+    
