@@ -6,7 +6,7 @@ from urllib.parse import urljoin
 
 # Configurações iniciais
 BASE_URL = "http://localhost:8585/api/v1"
-AUTH_TOKEN = "Eu nao sei qual é o eu token, nao sei o que fazer da minha vida, estive o fucking dia inteiro nisto, podia estar a jogar mas nao estou aqui a sofrer"  # Substitua pelo seu token real
+AUTH_TOKEN = "eyJraWQiOiJHYjM4OWEtOWY3Ni1nZGpzLWE5MmotMDI0MmJrOTQzNTYiLCJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJvcGVuLW1ldGFkYXRhLm9yZyIsInN1YiI6ImFkbWluIiwicm9sZXMiOlsiQWRtaW4iXSwiZW1haWwiOiJhZG1pbkBvcGVuLW1ldGFkYXRhLm9yZyIsImlzQm90IjpmYWxzZSwidG9rZW5UeXBlIjoiT01fVVNFUiIsImlhdCI6MTc0NDcxMTY2MSwiZXhwIjoxNzQ0NzE1MjYxfQ.aWdP_7vY2MaC7-7KBuEJIdL9XCVOYbE54MSFZgCBuGci55qNd0BBTBvj0sFk3JYt20TWzLt2pCT2PPz-O1v9jCCXkySoz4hVC_qShhE7gB4P8Yjz_BrZuARr-nWCqroKVfok0DOH30nNfkkLrgXHj76sVbuY2ZR_5e5_gU-lB9Tw-YGJ4yKNzFEvRMOU-rFul0ptmPquU_qHDkfKBk2VY_YxkdgVSs2I0lcLKuRITL-NYCz8yDYlIWYSHpUZYM-zH3tdSiw0YQILsqsHhH1irRpgb5p5KpeMkcGkcbn_hQK0Lc7lWAmjVCD9tFzs3os9-Gjz5-Gk2QKXr9aCNiom4w"
 
 HEADERS = {
     "Content-Type": "application/json",
@@ -43,11 +43,11 @@ def atualizar_entidade(tipo_entidade, id_entidade, dados):
     return fazer_requisicao("PUT", f"/{tipo_entidade}/{id_entidade}", json=dados)
 
 # Destruir entidade
-def deletar_entidade(tipo_entidade, id_entidade):
+def eliminar_entidade(tipo_entidade, id_entidade):
     return fazer_requisicao("DELETE", f"/{tipo_entidade}/{id_entidade}")
 
 # Procurar entidades por termo
-def buscar_entidades(termo, tipo_entidade=None):
+def procurar_entidades(termo, tipo_entidade=None):
     params = {"q": termo}
     if tipo_entidade:
         params["entityType"] = tipo_entidade
@@ -75,7 +75,7 @@ if __name__ == "__main__":
 
     # Procurar entidades que contém 'customer'
     print("\n--Procurar entidades--\n")
-    resultados = buscar_entidades("customer", tipo_entidade="table")
+    resultados = procurar_entidades("customer", tipo_entidade="table")
     print("Resultados da busca:", json.dumps(resultados, indent=2))
 
     # Listar serviços de BD
