@@ -2,6 +2,12 @@ sudo systemctl start docker   # Start
 
 sudo systemctl stop docker    # Stop
 
+# Clean up any failed containers
+docker compose -f docker-compose-postgres.yml down
+
+# Start fresh
+docker compose -f docker-compose-postgres.yml up -d
+
 docker compose -f docker-compose-postgres.yml stop          # Stop
 
 docker compose -f docker-compose-postgres.yml start        # Start
@@ -14,13 +20,6 @@ docker exec -it <name> bash  # Enter container
 
 
 docker exec -it openmetadata_postgresql psql -U openmetadata_user -d openmetadata_db     # open default openmetadata postgresql
-
-
-# Clean up any failed containers
-docker compose -f docker-compose-postgres.yml down
-
-# Start fresh
-docker compose -f docker-compose-postgres.yml up -d
 
 ## Ambiente virtual (para rodar os scripts) ##
 python3 -m venv venv      # Criar o ambiente virtual
