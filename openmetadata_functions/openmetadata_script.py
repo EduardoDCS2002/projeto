@@ -94,4 +94,5 @@ if __name__ == "__main__":
     servicos = listar_servicos("databaseServices")
     print("Serviços encontrados:", json.dumps(servicos, indent=2))
 
-    
+    print("\n--")
+
