@@ -1,9 +1,8 @@
-- Função para o OpenMetadata que dá reset (apaga todos os datasets)
+- Função para o OpenMetadata que dá reset (apaga todos os datasets);
 
-- Script geral que dada uma query vá roubar ao CKAN/OpenMetadata e meta no OpenMetadata/CKAN (Objetivo do projeto) 
+- Script para o openmetadata que vai buscar datasets ao ckan e outro script que faz o contrário;
+
+- Script geral que dada uma query vá buscar ao data_gov com a instância do ckan e com a instância do openmetadata 
+    e depois sincronize os dois;(Objetivo do projeto) 
 
 - Relatório :'(
-
-
-
-- User interface ???
