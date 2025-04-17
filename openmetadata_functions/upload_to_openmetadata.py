@@ -2,7 +2,6 @@ import requests
 from urllib.parse import quote
 import base64
 
-# Configuration
 DATA_GOV_API = "https://catalog.data.gov/api/3"
 OPENMETADATA_URL = "http://localhost:8585/api/v1"
 LOGIN_URL = f"{OPENMETADATA_URL}/users/login"
@@ -10,7 +9,7 @@ SERVICES_URL = f"{OPENMETADATA_URL}/services/databaseServices"
 DATABASES_URL = f"{OPENMETADATA_URL}/databases"
 SCHEMAS_URL = f"{OPENMETADATA_URL}/databaseSchemas"
 TABLES_URL = f"{OPENMETADATA_URL}/tables"
-
+"""
 # Valid DatabaseServiceTypes from OpenMetadata source code
 VALID_SERVICE_TYPES = [
     "BigQuery",
@@ -29,10 +28,10 @@ VALID_SERVICE_TYPES = [
     "Glue",
     "Athena"
 ]
-
+"""
 
 def get_auth_token():
-    """Authenticate with OpenMetadata"""
+    """Authentication"""
     
     headers = {
         "Content-Type": "application/json"
@@ -70,7 +69,7 @@ def create_entity(token, url, data):
 
 def setup_infrastructure(token):
     """Create required service, database, and schema"""
-    # 1. Create Database Service - Using Datalake as the most generic type
+    # Create Database Service
     service_data = {
         "name": "data_gov_service",
         "serviceType": "Datalake",  # Using a valid service type
@@ -90,33 +89,26 @@ def setup_infrastructure(token):
     }
     create_entity(token, SERVICES_URL, service_data)
 
-    # 2. Create Database
+    # Create Database
     db_data = {
         "name": "external_datasets",
         "service": "data_gov_service"
     }
     create_entity(token, DATABASES_URL, db_data)
 
-    # 3. Create Schema
+    # Create Schema
     schema_data = {
         "name": "data_gov",
         "database": "data_gov_service.external_datasets"
     }
     create_entity(token, SCHEMAS_URL, schema_data)
 
-def get_dataset_metadata(dataset_id):
-    """Get dataset metadata from data.gov"""
-    url = f"{DATA_GOV_API}/action/package_show?id={quote(dataset_id)}"
-    response = requests.get(url)
-    response.raise_for_status()
-    return response.json()["result"]
-
 def create_table(token, dataset_meta, resource):
     """Create a table in OpenMetadata"""
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     
-    table_name = f"{dataset_meta['name'].lower().replace('-', '_')}_{resource['format'].lower()}"
-    
+    table_name = f"{dataset_meta['name'].lower().replace('-', '_')}_{resource['format'].lower()}" # each table for each dataset is named after
+                                                                                                  # the dataset together with the resource
     table_data = {
         "name": table_name[:64],
         "displayName": f"{dataset_meta['title'][:64]} - {resource.get('name', 'Data')[:32]}",
@@ -137,13 +129,10 @@ def create_table(token, dataset_meta, resource):
 
 def main(dataset_id):
     try:
-        print("🔐 Authenticating...")
+        print("Authenticating...")
         token = get_auth_token()
         
-        print("🛠 Setting up infrastructure...")
-        setup_infrastructure(token)
-        
-        print(f"🌐 Fetching {dataset_id}...")
+        print(f"Fetching {dataset_id}...")
         dataset_meta = get_dataset_metadata(dataset_id)
         
         results = []
@@ -151,7 +140,7 @@ def main(dataset_id):
             if not resource.get("url"):
                 continue
                 
-            print(f"📦 Processing: {resource.get('name', resource['id'])}")
+            print(f"Processing: {resource.get('name', resource['id'])}")
             try:
                 result = create_table(token, dataset_meta, resource)
                 results.append({
@@ -159,15 +148,15 @@ def main(dataset_id):
                     "url": resource["url"]
                 })
             except Exception as e:
-                print(f"⚠️ Failed to create table: {str(e)}")
+                print(f"Failed to create table: {str(e)}")
                 continue
         
-        print(f"\n🎉 Success! Created {len(results)} tables:")
+        print(f"\nCreated {len(results)} tables:")
         for res in results:
             print(f"- {res['table']} ({res['url']})")
             
     except Exception as e:
-        print(f"❌ Critical error: {str(e)}")
+        print(f"Critical error: {str(e)}")
 
 if __name__ == "__main__":
     main("electric-vehicle-population-data")
