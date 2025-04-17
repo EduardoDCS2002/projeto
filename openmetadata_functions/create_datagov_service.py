@@ -1,9 +1,9 @@
 import requests
 import base64
-# Create the service first (run this once)
 
+# Create the service
 encoded_password = base64.b64encode("admin".encode('utf-8')).decode('utf-8')
-payload = { # assuming you are only using the admin account for openmetadata
+payload = { 
     "email": "admin@open-metadata.org",
     "password": encoded_password
 }
@@ -26,7 +26,7 @@ requests.post(f"{OPENMETADATA_URL}/services/databaseServices",
              headers=headers, 
              json=service_entity)
 
-# Then create database
+# Create database
 database_entity = {
     "name": "external_datasets",
     "service": "data_gov_connector"
@@ -35,7 +35,7 @@ requests.post(f"{OPENMETADATA_URL}/databases",
              headers=headers, 
              json=database_entity)
 
-# Then create schema
+# Create schema
 schema_entity = {
     "name": "data_gov",
     "database": "data_gov_connector.external_datasets"

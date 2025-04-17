@@ -6,7 +6,7 @@ CKAN_URL = "http://localhost:5000/"
 API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJtSDF4V2pmQkEtMXRJZXNMRGZTaEk4U0dPX0JfdEtaVi1jSHBIeVJfcTJRIiwiaWF0IjoxNzQ0Mjk4MTIyfQ.7yBFMAk28YDFdq39PHnHPPJDaQxtRWxmKsiU0p4x6cc"
 
 def list_all_datasets(ckan_url, orgname, api_key=None):
-    """List all datasets for an organization including private ones."""
+    # List all datasets for an organization including private ones
     endpoint = urljoin(ckan_url, "api/3/action/package_search")
     
     params = {
@@ -36,7 +36,7 @@ def list_all_datasets(ckan_url, orgname, api_key=None):
         return []
 
 def delete_dataset(ckan_url, dataset_id_or_name, api_key):
-    """Delete a dataset from CKAN with retry logic."""
+    # Delete a dataset from CKAN with retry logic
     endpoint = urljoin(ckan_url, "api/3/action/package_delete")
     
     for attempt in range(3):
@@ -63,7 +63,7 @@ def delete_dataset(ckan_url, dataset_id_or_name, api_key):
             time.sleep(2)  # Wait before retrying
 
 def get_all_organizations():
-    """Get all organizations including deleted ones."""
+    # Get all organizations including deleted ones
     endpoint = urljoin(CKAN_URL, "api/3/action/organization_list")
     
     try:
@@ -81,7 +81,7 @@ def get_all_organizations():
         return []
 
 def purge_organization(name):
-    """Completely remove an organization with error handling."""
+    # Completely remove an organization
     endpoint = urljoin(CKAN_URL, "api/3/action/organization_purge")
     
     try:
@@ -99,7 +99,7 @@ def purge_organization(name):
         return {"success": False, "error": str(e)}
 
 def purge_all_organizations():
-    """Main function to purge all organizations and their datasets."""
+    # Main function to purge/destroy/kill all organizations and their datasets
     orgs = get_all_organizations()
     if not orgs:
         print("No organizations found to purge.")
@@ -147,12 +147,12 @@ def purge_all_organizations():
     
     # Print summary
     print("\nPurge Summary:")
-    success_count = sum(1 for r in results if r.get("success"))
+    success_count = sum(1 for r in results if r.get("success!"))
     print(f"Successfully purged {success_count}/{len(results)} organizations")
     
     if len(results) != success_count:
         print("\nFailed organizations:")
-        for org in [r for r in results if not r.get("success")]:
+        for org in [r for r in results if not r.get("success!")]:
             print(f"- {org['name']}: {org.get('error', 'Unknown error')}")
     
     return results

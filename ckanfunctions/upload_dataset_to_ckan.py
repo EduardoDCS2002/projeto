@@ -21,7 +21,11 @@ def list_all_datasets(ckan_url, api_key=None, include_private=True):
     
     return [pkg["name"] for pkg in data["result"]["results"]]
 
-def delete_dataset(ckan_url, dataset_id_or_name, api_key): # It was necessary to fix an old error
+'''
+# It was necessary to fix an old error
+# We don't have the courage to erase it :(
+
+def delete_dataset(ckan_url, dataset_id_or_name, api_key): 
     # Kill a dataset from CKAN
     try:
         response = requests.post(
@@ -41,7 +45,8 @@ def delete_dataset(ckan_url, dataset_id_or_name, api_key): # It was necessary to
     
     except requests.exceptions.RequestException as e:
         raise ValueError(f"Failed to delete dataset: {str(e)}")
-
+'''
+        
 # Get and Post
 
 def ckan_get(ckan_url, action, api_key=None, params=None):
@@ -72,7 +77,7 @@ def ckan_post(ckan_url, action, json_data, api_key=None):
     except requests.exceptions.RequestException as e:
         raise ValueError(f"CKAN API ({action}) failed: {str(e)}")
 
-# Functions that need Get
+## Functions that need Get
 def get_package_list(ckan_url, limit=10, api_key=None):
     # List all datasets (packages) in CKAN instance
     return ckan_get(ckan_url, "package_list", api_key, {"limit": limit})
@@ -91,7 +96,6 @@ def get_tag_list(ckan_url, api_key=None):
 
 def get_package_show(ckan_url, dataset_name, api_key=None):
     # Get full metadata for a specific dataset
-    
     return ckan_get(ckan_url, "package_show", api_key, {"id": dataset_name})
 
 def get_resource_show(ckan_url, resource_id, api_key=None):
@@ -147,15 +151,15 @@ def sync_dataset(source_url, target_ckan_url, target_api_key, dataset_name):
         try:
             target_dataset = get_package_show(target_ckan_url, dataset_name, target_api_key)["result"]
             target_resources = {r["url"]: r for r in target_dataset.get("resources", [])}
-            result["status"] = "updated"  # Will update existing dataset
+            result["status"] = "updated"                            # Will update existing dataset
             target_dataset_exists = True
         except ValueError as e:
             if "Not found" not in str(e) and "404" not in str(e):
-                raise  # Re-raise if it's not a "not found" error
+                raise                                               # Re-raise if it's not a "not found" error
             # Dataset doesn't exist yet - this is OK!
-            result["status"] = "created"  # Will create new dataset
+            result["status"] = "created"                            # Will create new dataset
 
-        # Check organization exists
+        # Check if organization exists
         org = source_dataset.get("organization")
         if not org:
             raise ValueError("Source dataset has no organization")

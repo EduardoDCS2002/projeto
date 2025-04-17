@@ -59,7 +59,7 @@ if response.status_code == 200:
         print(f"Uploading {resource.get('name', 'Unnamed Resource')} to CKAN...")
         try:
             # Download the resource directly from the URL
-            file_response = requests.get(resource_url, timeout=10)  # Add timeout
+            file_response = requests.get(resource_url, timeout=10) 
             if file_response.status_code == 200:
                 # Upload the resource to CKAN
                 upload_response = requests.post(
@@ -67,10 +67,10 @@ if response.status_code == 200:
                     headers={"Authorization": api_key},
                     files=[("upload", (resource_url.split("/")[-1], file_response.content))],
                     data={
-                        "package_id": ckan_dataset_id,  # ID of the dataset in your CKAN instance
+                        "package_id": ckan_dataset_id,                              # ID of the dataset in your CKAN instance
                         "name": resource.get("name", resource_url.split("/")[-1]),  # Name of the resource
-                        "url": resource_url,  # Original URL of the resource
-                        "format": resource.get("format", ""),  # File format
+                        "url": resource_url,                                        # Original URL of the resource
+                        "format": resource.get("format", ""),                       # File format
                     },
                 )
                 if upload_response.status_code == 200:

@@ -6,7 +6,7 @@ API_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJtSDF4V2pmQkEtMXRJZXNMRG
 
 
 
-# needs to be given the source url and the dataset name
+# Needs to be given the source url and the dataset name
 result = upload_dataset_to_ckan.sync_dataset(
     source_url="https://catalog.data.gov/api/3/action/",
     target_ckan_url=CKAN_URL,

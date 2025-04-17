@@ -7,14 +7,14 @@ DATA_GOV_API = "https://catalog.data.gov/api/3"
 OPENMETADATA_URL = "http://localhost:8585/api/v1"
 
 def search_datasets(query: str, max_results: int = 10) -> List[Dict]:
-    """Search for datasets on data.gov matching the query"""
+    # Search for datasets on data.gov matching the query
     url = f"{DATA_GOV_API}/action/package_search?q={quote(query)}&rows={max_results}"
     response = requests.get(url)
     response.raise_for_status()
     return response.json()["result"]["results"]
 
 def process_datasets():
-    """Process datasets after a query"""
+    # Process datasets after a query
     token = upload_to_openmetadata.get_auth_token()
     upload_to_openmetadata.setup_infrastructure(token)
     

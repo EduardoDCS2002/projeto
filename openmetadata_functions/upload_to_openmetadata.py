@@ -31,13 +31,12 @@ VALID_SERVICE_TYPES = [
 """
 
 def get_auth_token():
-    """Authentication"""
-    
+    # Authentication
     headers = {
         "Content-Type": "application/json"
     }
     encoded_password = base64.b64encode("admin".encode('utf-8')).decode('utf-8')
-    payload = { # assuming you are only using the admin account for openmetadata
+    payload = { 
         "email": "admin@open-metadata.org",
         "password": encoded_password
     }
@@ -47,7 +46,7 @@ def get_auth_token():
     return response.json()["accessToken"]
 
 def get_dataset_metadata(dataset_id):
-    """Get complete dataset metadata from data.gov"""
+    # Get complete dataset metadata from data.gov
     url = f"{DATA_GOV_API}/action/package_show?id={quote(dataset_id)}"
     response = requests.get(url)
     response.raise_for_status()
@@ -55,20 +54,21 @@ def get_dataset_metadata(dataset_id):
 
 
 def create_entity(token, url, data):
-    """Helper to create any entity"""
+    # Helper to create any entity
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     response = requests.post(url, headers=headers, json=data)
     try:
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as e:
-        if response.status_code == 409:  # Already exists
+        if response.status_code == 409:
             return {"status": "already_exists"}
         print(f"Error creating entity: {response.text}")
         raise
 
 def setup_infrastructure(token):
-    """Create required service, database, and schema"""
+    ## Create required service, database, and schema
+
     # Create Database Service
     service_data = {
         "name": "data_gov_service",
@@ -104,7 +104,7 @@ def setup_infrastructure(token):
     create_entity(token, SCHEMAS_URL, schema_data)
 
 def create_table(token, dataset_meta, resource):
-    """Create a table in OpenMetadata"""
+    # Create a table in OpenMetadata
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     
     table_name = f"{dataset_meta['name'].lower().replace('-', '_')}_{resource['format'].lower()}" # each table for each dataset is named after
