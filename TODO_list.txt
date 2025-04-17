@@ -1,0 +1,9 @@
+- Função para o OpenMetadata que dá reset (apaga todos os datasets)
+
+- Script geral que dada uma query vá roubar ao CKAN/OpenMetadata e meta no OpenMetadata/CKAN (Objetivo do projeto) 
+
+- Relatório :'(
+
+
+
+- User interface ???
