@@ -136,6 +136,7 @@ def purge_all_organizations():
                 "error": result.get("error")
             }
             results.append(status)
+            print(status["success"])
             print(f"Purge status: {'Success' if status['success'] else 'Failed'}")
         except Exception as e:
             print(f"Critical error purging {org_name}: {str(e)}")
@@ -147,12 +148,12 @@ def purge_all_organizations():
     
     # Print summary
     print("\nPurge Summary:")
-    success_count = sum(1 for r in results if r.get("success!"))
+    success_count = sum(1 for r in results if r.get("success"))
     print(f"Successfully purged {success_count}/{len(results)} organizations")
     
     if len(results) != success_count:
         print("\nFailed organizations:")
-        for org in [r for r in results if not r.get("success!")]:
+        for org in [r for r in results if not r.get("success")]:
             print(f"- {org['name']}: {org.get('error', 'Unknown error')}")
     
     return results

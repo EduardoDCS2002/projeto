@@ -1,58 +1,11 @@
 import requests
 from urllib.parse import urljoin
-
-def list_all_datasets(ckan_url, api_key=None, include_private=True):
-    # List all datasets even hidden
-    params = {
-        "rows": 1000,  # Max allowed by CKAN
-        "include_private": include_private
-    }
-    response = requests.get(
-        urljoin(ckan_url, "package_search"),
-        headers={"Authorization": api_key},
-        params=params,
-        timeout=15
-    )
-    response.raise_for_status()
-    data = response.json()
-    
-    if not data.get("success"):
-        raise ValueError(f"API error: {data.get('error')}")
-    
-    return [pkg["name"] for pkg in data["result"]["results"]]
-
-'''
-# It was necessary to fix an old error
-# We don't have the courage to erase it :(
-
-def delete_dataset(ckan_url, dataset_id_or_name, api_key): 
-    # Kill a dataset from CKAN
-    try:
-        response = requests.post(
-            urljoin(ckan_url, "package_delete"),
-            headers={"Authorization": api_key},
-            json={"id": dataset_id_or_name},
-            timeout=15
-        )
-        response.raise_for_status()
-        data = response.json()
-        
-        if not data.get("success"):
-            raise ValueError(f"API error: {data.get('error', 'Unknown error')}")
-        
-        print(f"Successfully deleted dataset: {dataset_id_or_name}")
-        return data["result"]
-    
-    except requests.exceptions.RequestException as e:
-        raise ValueError(f"Failed to delete dataset: {str(e)}")
-'''
-        
-# Get and Post
+import time
 
 def ckan_get(ckan_url, action, api_key=None, params=None):
-    # Generic GET request for CKAN API
-    url = ckan_url + action
-    headers = {"Authorization": api_key}
+    """Generic GET request for CKAN API"""
+    url = urljoin(ckan_url, action)
+    headers = {"Authorization": api_key} if api_key else {}
     try:
         response = requests.get(url, params=params, headers=headers, timeout=15)
         response.raise_for_status()
@@ -64,9 +17,9 @@ def ckan_get(ckan_url, action, api_key=None, params=None):
         raise ValueError(f"CKAN API ({action}) failed: {str(e)}")
 
 def ckan_post(ckan_url, action, json_data, api_key=None):
-    # Generic POST request for CKAN API
-    url = ckan_url + action
-    headers = {"Authorization": api_key}
+    """Generic POST request for CKAN API"""
+    url = urljoin(ckan_url, action)
+    headers = {"Authorization": api_key} if api_key else {}
     try:
         response = requests.post(url, json=json_data, headers=headers, timeout=15)
         response.raise_for_status()
@@ -77,62 +30,34 @@ def ckan_post(ckan_url, action, json_data, api_key=None):
     except requests.exceptions.RequestException as e:
         raise ValueError(f"CKAN API ({action}) failed: {str(e)}")
 
-## Functions that need Get
-def get_package_list(ckan_url, limit=10, api_key=None):
-    # List all datasets (packages) in CKAN instance
-    return ckan_get(ckan_url, "package_list", api_key, {"limit": limit})
-
-def get_organization_list(ckan_url, api_key=None):
-    # List all organizations
-    return ckan_get(ckan_url, "organization_list", api_key)
-
-def get_group_list(ckan_url, api_key=None):
-    # List all groups
-    return ckan_get(ckan_url, "group_list", api_key)
-
-def get_tag_list(ckan_url, api_key=None):
-    # List all tags
-    return ckan_get(ckan_url, "tag_list", api_key)
-
-def get_package_show(ckan_url, dataset_name, api_key=None):
-    # Get full metadata for a specific dataset
-    return ckan_get(ckan_url, "package_show", api_key, {"id": dataset_name})
-
-def get_resource_show(ckan_url, resource_id, api_key=None):
-    # Get metadata for a specific resource
-    return ckan_get(ckan_url, "resource_show", api_key, {"id": resource_id})
-
-# Check if entity exists or create it
-def ensure_entity(ckan_url, api_key, entity_type, name, title=None, description=""):
+def ensure_entity(ckan_url, api_key, entity_type, name, title=None, description="", extras=None):
+    """Ensure an organization/group exists, create if missing"""
     try:
-        # Try to get existing
-        existing = ckan_get(
-            ckan_url, 
-            f"{entity_type}_show", 
-            api_key, 
-            {"id": name}
-        )
+        existing = ckan_get(ckan_url, f"{entity_type}_show", api_key, {"id": name})
         return name
     except ValueError as e:
         if "404" in str(e) or "Not found" in str(e):
-            # Create if doesn't exist
             create_data = {
                 "name": name,
                 "title": title or name.replace("-", " ").title(),
-                "description": description
+                "description": description,
+                **(extras if extras else {})
             }
-            new_entity = ckan_post(
-                ckan_url,
-                f"{entity_type}_create",
-                create_data,
-                api_key
-            )
+            new_entity = ckan_post(ckan_url, f"{entity_type}_create", create_data, api_key)
             return new_entity["result"]["name"]
         raise
 
-# sync dataset
-def sync_dataset(source_url, target_ckan_url, target_api_key, dataset_name):
+def ensure_tag(ckan_url, api_key, tag_name):
+    """Ensure a tag exists, create if missing"""
+    try:
+        ckan_get(ckan_url, "tag_show", api_key, {"id": tag_name})
+        return tag_name
+    except ValueError:
+        ckan_post(ckan_url, "tag_create", {"name": tag_name}, api_key)
+        return tag_name
 
+def sync_dataset(source_url, target_ckan_url, target_api_key, dataset_name):
+    """Sync a dataset from source to target CKAN instance"""
     result = {
         "status": "skipped",
         "dataset_name": dataset_name,
@@ -142,75 +67,76 @@ def sync_dataset(source_url, target_ckan_url, target_api_key, dataset_name):
 
     try:
         # Fetch source dataset
-        source_dataset = get_package_show(source_url, dataset_name)["result"]
+        source_dataset = ckan_get(source_url, "package_show", params={"id": dataset_name})["result"]
         
-        # Check target existence
-        target_resources = {}
-        target_dataset_exists = False
+        # Validate required fields
+        required_fields = ["title", "name", "organization"]
+        for field in required_fields:
+            if not source_dataset.get(field):
+                raise ValueError(f"Source dataset missing required field: {field}")
 
+        # Check if target exists
+        target_exists = False
         try:
-            target_dataset = get_package_show(target_ckan_url, dataset_name, target_api_key)["result"]
-            target_resources = {r["url"]: r for r in target_dataset.get("resources", [])}
-            result["status"] = "updated"                            # Will update existing dataset
-            target_dataset_exists = True
+            target_dataset = ckan_get(target_ckan_url, "package_show", target_api_key, {"id": dataset_name})["result"]
+            target_exists = True
+            result["status"] = "updated"
         except ValueError as e:
             if "Not found" not in str(e) and "404" not in str(e):
-                raise                                               # Re-raise if it's not a "not found" error
-            # Dataset doesn't exist yet - this is OK!
-            result["status"] = "created"                            # Will create new dataset
+                raise
+            result["status"] = "created"
 
-        # Check if organization exists
-        org = source_dataset.get("organization")
-        if not org:
-            raise ValueError("Source dataset has no organization")
-        
+        # Sync organization
+        org = source_dataset["organization"]
+        org_extras = {
+            "image_url": org.get("image_url"),
+            "approval_status": "approved"
+        }
         org_name = ensure_entity(
             target_ckan_url, target_api_key,
             "organization", org["name"],
-            org.get("title"), org.get("description", "")
+            org.get("title"), org.get("description", ""),
+            extras=org_extras
         )
 
-        # Prepare dataset to create or update
+        # Prepare dataset data
         EXCLUDE_FIELDS = {
+            "id",  # Critical: Never force an external ID
             "metadata_created", "metadata_modified", "revision_id",
             "creator_user_id", "private", "state",
-            "resources", "organization", "tags", "groups",
-            "id", "name", "owner_org"
-        }
-
-        TRANSFORM_FIELDS = {
-            "tags": lambda ts: [{"name": t["name"]} for t in ts],
-            "groups": lambda gs: [{"name": g["name"]} for g in gs]
+            "resources", "organization", "tags", "groups"
         }
 
         package = {
-            "id": source_dataset["id"],
             "name": dataset_name,
+            "title": source_dataset["title"],
             "owner_org": org_name,
-            **{
-                k: TRANSFORM_FIELDS[k](v) if k in TRANSFORM_FIELDS else v
-                for k, v in source_dataset.items()
-                if k not in EXCLUDE_FIELDS
-            }
+            "state": "active",
+            "notes": source_dataset.get("notes", ""),
+            "tags": [{"name": t["name"]} 
+                    for t in source_dataset.get("tags", [])],
+            "extras": source_dataset.get("extras", [])
         }
 
+        # Add remaining fields
+        for k, v in source_dataset.items():
+            if k not in EXCLUDE_FIELDS and k not in package:
+                package[k] = v
+
         # Create or update package
-        if target_dataset_exists:
-            ckan_post(target_ckan_url, "package_update", package, target_api_key)
+        if target_exists:
+            response = ckan_post(target_ckan_url, "package_update", package, target_api_key)
         else:
-            print(package["id"])
-            print(package["name"])
-            ckan_post(target_ckan_url, "package_create", package, target_api_key)
+            response = ckan_post(target_ckan_url, "package_create", package, target_api_key)
             result["status"] = "created"
 
-        # Sync resources
+        # Sync resources (with rate limiting)
         for resource in source_dataset.get("resources", []):
             if not resource.get("url"):
                 result["errors"].append(f"Resource missing URL: {resource.get('id')}")
                 continue
 
-            if resource["url"] in target_resources:
-                continue  # Skip existing
+            time.sleep(0.5)  # Rate limiting
 
             try:
                 ckan_post(
@@ -227,6 +153,9 @@ def sync_dataset(source_url, target_ckan_url, target_api_key, dataset_name):
                 result["resources_added"].append(resource["url"])
             except Exception as e:
                 result["errors"].append(f"Resource {resource.get('url')} failed: {str(e)}")
+
+        if result["errors"]:
+            result["status"] = "partially_synced"
 
     except Exception as e:
         result["status"] = "failed"
