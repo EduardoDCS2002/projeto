@@ -33,7 +33,7 @@ def ckan_post(ckan_url, action, json_data, api_key=None):
 def ensure_entity(ckan_url, api_key, entity_type, name, title=None, description="", extras=None):
     """Ensure an organization/group exists, create if missing"""
     try:
-        existing = ckan_get(ckan_url, f"{entity_type}_show", api_key, {"id": name})
+        ckan_get(ckan_url, f"{entity_type}_show", api_key, {"id": name})
         return name
     except ValueError as e:
         if "404" in str(e) or "Not found" in str(e):
@@ -46,15 +46,6 @@ def ensure_entity(ckan_url, api_key, entity_type, name, title=None, description=
             new_entity = ckan_post(ckan_url, f"{entity_type}_create", create_data, api_key)
             return new_entity["result"]["name"]
         raise
-
-def ensure_tag(ckan_url, api_key, tag_name):
-    """Ensure a tag exists, create if missing"""
-    try:
-        ckan_get(ckan_url, "tag_show", api_key, {"id": tag_name})
-        return tag_name
-    except ValueError:
-        ckan_post(ckan_url, "tag_create", {"name": tag_name}, api_key)
-        return tag_name
 
 def sync_dataset(source_url, target_ckan_url, target_api_key, dataset_name):
     """Sync a dataset from source to target CKAN instance"""
@@ -78,7 +69,7 @@ def sync_dataset(source_url, target_ckan_url, target_api_key, dataset_name):
         # Check if target exists
         target_exists = False
         try:
-            target_dataset = ckan_get(target_ckan_url, "package_show", target_api_key, {"id": dataset_name})["result"]
+            ckan_get(target_ckan_url, "package_show", target_api_key, {"id": dataset_name})["result"]
             target_exists = True
             result["status"] = "updated"
         except ValueError as e:
@@ -101,8 +92,7 @@ def sync_dataset(source_url, target_ckan_url, target_api_key, dataset_name):
 
         # Prepare dataset data
         EXCLUDE_FIELDS = {
-            "id",  # Critical: Never force an external ID
-            "metadata_created", "metadata_modified", "revision_id",
+            "id", "metadata_created", "metadata_modified", "revision_id",
             "creator_user_id", "private", "state",
             "resources", "organization", "tags", "groups"
         }
@@ -113,8 +103,8 @@ def sync_dataset(source_url, target_ckan_url, target_api_key, dataset_name):
             "owner_org": org_name,
             "state": "active",
             "notes": source_dataset.get("notes", ""),
-            "tags": [{"name": t["name"]} 
-                    for t in source_dataset.get("tags", [])],
+            "tags": source_dataset.get("tags", []),
+            "groups": source_dataset.get("groups", []),
             "extras": source_dataset.get("extras", [])
         }
 
@@ -125,12 +115,11 @@ def sync_dataset(source_url, target_ckan_url, target_api_key, dataset_name):
 
         # Create or update package
         if target_exists:
-            response = ckan_post(target_ckan_url, "package_update", package, target_api_key)
+            ckan_post(target_ckan_url, "package_update", package, target_api_key)
         else:
-            response = ckan_post(target_ckan_url, "package_create", package, target_api_key)
-            result["status"] = "created"
+            ckan_post(target_ckan_url, "package_create", package, target_api_key)
 
-        # Sync resources (with rate limiting)
+        # Sync resources
         for resource in source_dataset.get("resources", []):
             if not resource.get("url"):
                 result["errors"].append(f"Resource missing URL: {resource.get('id')}")
