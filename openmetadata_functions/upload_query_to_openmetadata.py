@@ -1,20 +1,16 @@
 import requests
 from urllib.parse import quote
-from typing import List, Dict
 import upload_to_openmetadata
 
 DATA_GOV_API = "https://catalog.data.gov/api/3"
-OPENMETADATA_URL = "http://localhost:8585/api/v1"
 
-def search_datasets(query: str, max_results: int = 10) -> List[Dict]:
-    # Search for datasets on data.gov matching the query
+def search_datasets(query: str, max_results: int = 10):
     url = f"{DATA_GOV_API}/action/package_search?q={quote(query)}&rows={max_results}"
     response = requests.get(url)
     response.raise_for_status()
     return response.json()["result"]["results"]
 
 def process_datasets():
-    # Process datasets after a query
     token = upload_to_openmetadata.get_auth_token()
     upload_to_openmetadata.setup_infrastructure(token)
     
@@ -38,25 +34,26 @@ def process_datasets():
                 if not resource.get("url"):
                     continue
                 
-                print(f"Processing resource: {resource.get('name', resource['id'])}")
+                print(f"\nProcessing resource: {resource.get('name', resource['id'])}")
+                print(f"Format: {resource.get('format')}")
+                print(f"URL: {resource['url']}")
+                
                 try:
                     result = upload_to_openmetadata.create_table(token, dataset_meta, resource)
-                    if result.get("status") == "already_exists":
-                        print("Table already exists - skipping")
-                        skipped += 1
-                    else:
-                        created += 1
+                    print(f"Created table: {result['name']}")
+                    created += 1
                 except requests.exceptions.HTTPError as e:
                     if e.response.status_code == 409:
                         print("Table already exists - skipping")
                         skipped += 1
                     else:
-                        print(f"Failed to create table: {str(e)}")
+                        print(f"Failed to create table: {e.response.text}")
                         skipped += 1
                 except Exception as e:
                     print(f"Error creating table: {str(e)}")
                     skipped += 1
             
+            print(f"\nSummary for {dataset['title']}:")
             print(f"Created {created} new tables, skipped {skipped} existing tables")
             total_created += created
             total_skipped += skipped
