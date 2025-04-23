@@ -1,10 +1,7 @@
 import requests
-import json
 import base64
 from urllib.parse import quote
 from slugify import slugify
-import pandas as pd
-from io import StringIO
 
 DATA_GOV_API = "https://catalog.data.gov/api/3"
 OPENMETADATA_URL = "http://localhost:8585/api/v1"
@@ -32,40 +29,22 @@ def get_dataset_metadata(dataset_id):
     return response.json()["result"]
 
 def detect_schema(resource):
-    """Detect schema from CSV/JSON resources"""
-    try:
-        if resource['format'].lower() == 'csv':
-            # Sample first few rows to detect schema
-            content = requests.get(resource['url']).text
-            df = pd.read_csv(StringIO(content), nrows=10)
-            return [{
-                "name": col,
-                "dataType": "STRING",  # Simplified - could map pandas dtypes to SQL types
-                "description": f"Column from {resource['name']}",
-                "dataTypeDisplay": str(df[col].dtype)
-            } for col in df.columns]
-        
-        elif resource['format'].lower() == 'json':
-            # Sample JSON schema
-            return [{
-                "name": "json_data",
-                "dataType": "JSON",
-                "description": "Raw JSON data",
-                "dataTypeDisplay": "json"
-            }]
-    except Exception:
-        return None
+    """Generate a simple schema for external references"""
+    return [{
+        "name": "external_reference",
+        "dataType": "STRING",
+        "description": f"Reference to {resource['format']} data at {resource['url']}",
+        "dataTypeDisplay": "URL"
+    }]
 
 def create_table(token, dataset_meta, resource):
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     
-    # Generate table name
     table_name = slugify(
         f"{dataset_meta['name']}_{resource['id'][:8]}",
         separator="_"
     )[:64]
 
-    # DCAT metadata preservation
     dcat_metadata = {
         "identifier": dataset_meta.get("id"),
         "issued": dataset_meta.get("metadata_created"),
@@ -86,14 +65,6 @@ def create_table(token, dataset_meta, resource):
         }
     }
 
-    # Try to detect schema, fallback to generic if fails
-    columns = detect_schema(resource) or [{
-        "name": "data_reference",
-        "dataType": "STRING",
-        "description": resource.get("description") or f"Reference to {resource['format']} data",
-        "dataTypeDisplay": resource.get("format", "external").lower()
-    }]
-
     table_data = {
         "name": table_name,
         "displayName": f"{dataset_meta['title'][:64]} - {resource.get('name', resource['format'])[:32]}",
@@ -103,13 +74,14 @@ def create_table(token, dataset_meta, resource):
         )[:2000],
         "tableType": "External",
         "sourceUrl": resource["url"],
-        "columns": columns,
+        "columns": detect_schema(resource),
         "databaseSchema": "data_gov_service.external_datasets.data_gov",
         "tags": [{"tagFQN": tag["display_name"]} for tag in dataset_meta.get("tags", [])][:10],
-        "owner": {
+        "owners": [{
             "type": "organization",
-            "name": dataset_meta.get("organization", {}).get("name", "data_gov")
-        },
+            "name": dataset_meta.get("organization", {}).get("name", "data_gov"),
+            "id": dataset_meta.get("organization", {}).get("id", "")
+        }],
         "extension": {
             "dcat": dcat_metadata
         }
@@ -121,42 +93,50 @@ def create_table(token, dataset_meta, resource):
 
 def setup_infrastructure(token):
     """Create required service, database, and schema"""
-    service_data = {
-        "name": "data_gov_service",
-        "serviceType": "Datalake",
-        "connection": {
-            "config": {
-                "type": "Datalake",
-                "configSource": {
-                    "securityConfig": {
-                        "awsAccessKeyId": "test",
-                        "awsSecretAccessKey": "test",
-                        "awsRegion": "us-east-1"
-                    }
-                },
-                "bucketName": "test-bucket"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    
+    # Create service if not exists
+    try:
+        service_data = {
+            "name": "data_gov_service",
+            "serviceType": "Datalake",
+            "connection": {
+                "config": {
+                    "type": "Datalake",
+                    "configSource": {
+                        "securityConfig": {
+                            "awsAccessKeyId": "test",
+                            "awsSecretAccessKey": "test",
+                            "awsRegion": "us-east-1"
+                        }
+                    },
+                    "bucketName": "test-bucket"
+                }
             }
         }
-    }
-    requests.post(SERVICES_URL, headers={
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }, json=service_data)
+        requests.post(SERVICES_URL, headers=headers, json=service_data)
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code != 409:  # Ignore "already exists" errors
+            raise
 
-    db_data = {
-        "name": "external_datasets",
-        "service": "data_gov_service"
-    }
-    requests.post(DATABASES_URL, headers={
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }, json=db_data)
+    # Create database if not exists
+    try:
+        db_data = {
+            "name": "external_datasets",
+            "service": "data_gov_service"
+        }
+        requests.post(DATABASES_URL, headers=headers, json=db_data)
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code != 409:
+            raise
 
-    schema_data = {
-        "name": "data_gov",
-        "database": "data_gov_service.external_datasets"
-    }
-    requests.post(SCHEMAS_URL, headers={
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }, json=schema_data)
+    # Create schema if not exists
+    try:
+        schema_data = {
+            "name": "data_gov",
+            "database": "data_gov_service.external_datasets"
+        }
+        requests.post(SCHEMAS_URL, headers=headers, json=schema_data)
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code != 409:
+            raise
