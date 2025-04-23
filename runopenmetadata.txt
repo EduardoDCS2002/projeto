@@ -25,11 +25,3 @@ docker exec -it openmetadata_postgresql psql -U openmetadata_user -d openmetadat
 python3 -m venv venv      # Criar o ambiente virtual
 
 source venv/bin/activate  # Entrar
-
-
-
-#coisas do edu:
-{"accessToken":"eyJraWQiOiJHYjM4OWEtOWY3Ni1nZGpzLWE5MmotMDI0MmJrOTQzNTYiLCJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJvcGVuLW1ldGFkYXRhLm9yZyIsInN1YiI6ImFkbWluIiwicm9sZXMiOlsiQWRtaW4iXSwiZW1haWwiOiJhZG1pbkBvcGVuLW1ldGFkYXRhLm9yZyIsImlzQm90IjpmYWxzZSwidG9rZW5UeXBlIjoiT01fVVNFUiIsImlhdCI6MTc0NDcxNDc3MiwiZXhwIjoxNzQ0NzE4MzcyfQ.eF65Bnph92kv4wPlfatbpq9IKaR2YdE0yLgSdbtgoGAowZvo-PlJIBc5VUMGEHyEH0ANNt0moTNUArGQet-s8bvc1l3VwoHrVBePmkvIolTFNtn0OCOIeygopfYQXgkHkHLNV_3HqM33bdKpXjh4HQFu8Prv7ozN32DVRs0Wi-yWaJvF15TliQt2IXq3osP1SCWn6W1SErzuxJrN67D996ykjhZ3ssOKda6zhUvr3jCSXR-F8nR3mifl3AVl6EUPQEP04o1XrDe1oNeWNEgMUvra8S6ugpE1MYSER56UxI41yF1X45dqoHxN_vOse1Fzmsf19DdMCicfft-EixiZpA"
-,"refreshToken":"a50a58e2-464b-47f2-89ad-c7cf3fe1542b"
-,"tokenType":"Bearer"
-,"expiryDuration":1744718372225}
