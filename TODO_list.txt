@@ -1,6 +1,11 @@
-- Função para o OpenMetadata que dá reset (apaga todos os datasets);
+- ckan to dcat e dcat to ckan, fazer com que não haja perda de informação.
+- anotar num ficheiro .txt onde guardar cada variável do dcat no openmetadata.
 
-- Script para o openmetadata que vai buscar datasets ao ckan e outro script que faz o contrário;
+
+
+
+
+
 
 - Script geral que dada uma query vá buscar ao data_gov com a instância do ckan e com a instância do openmetadata 
     e depois sincronize os dois;(Objetivo do projeto) 
