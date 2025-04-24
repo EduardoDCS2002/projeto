@@ -42,10 +42,10 @@ def get_organization_team_id(token):
         response.raise_for_status()
         return response.json()["id"]
     except Exception as e:
-        print(f"❌ Failed to get Organization team ID: {str(e)}")
+        print(f"Failed to get Organization team ID: {str(e)}")
         raise
 
-def setup_infrastructure(token):
+def setup_infrastructure(token):         # Service - Database - Schema - Table is the order of hierarchy of openmetadata
     """Set up required services, databases, and schemas for v1.6.8"""
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     
@@ -72,11 +72,11 @@ def setup_infrastructure(token):
                 }
             }
         )
-        print("✅ Created datalake service")
+        print("Created datalake service")
     except requests.exceptions.HTTPError as e:
         if e.response.status_code != 409:
             raise
-        print("✓ Datalake service already exists")
+        print("Datalake service already exists")
 
     # 2. Database
     try:
@@ -85,11 +85,11 @@ def setup_infrastructure(token):
             headers=headers,
             json={"name": "external_datasets", "service": "data_gov_service"}
         )
-        print("✅ Created database")
+        print("Created database")
     except requests.exceptions.HTTPError as e:
         if e.response.status_code != 409:
             raise
-        print("✓ Database already exists")
+        print("Database already exists")
 
     # 3. Schema
     try:
@@ -98,14 +98,13 @@ def setup_infrastructure(token):
             headers=headers,
             json={"name": "data_gov", "database": "data_gov_service.external_datasets"}
         )
-        print("✅ Created schema")
+        print("Created schema")
     except requests.exceptions.HTTPError as e:
         if e.response.status_code != 409:
             raise
-        print("✓ Schema already exists")
+        print("Schema already exists")
 
 def get_dataset_metadata(dataset_id):
-    """Fetch dataset metadata from CKAN"""
     url = f"{DATA_GOV_API}/action/package_show?id={quote(dataset_id)}"
     response = requests.get(url)
     response.raise_for_status()
@@ -139,7 +138,7 @@ def get_or_create_group_team(token):
             "name": team_name,
             "displayName": "Data.gov Importers",
             "teamType": "Group",
-            "description": "Team for imported CKAN datasets"
+            "description": "Team for DCAT datasets"
         }
         
         response = requests.post(
@@ -151,11 +150,11 @@ def get_or_create_group_team(token):
         return response.json()["id"]
         
     except Exception as e:
-        print(f"❌ Failed to get/create Group team: {str(e)}")
+        print(f"Failed to get/create Group team: {str(e)}")
         raise
 
 def create_classification_if_not_exists(token, classification_name="Classification"):
-    """Ensure the classification exists in OpenMetadata 1.6.8"""
+    """Ensure the classification exists"""
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     
     # First check if it exists
@@ -183,7 +182,7 @@ def create_classification_if_not_exists(token, classification_name="Classificati
         response.raise_for_status()
         return True
     except requests.exceptions.HTTPError as e:
-        print(f"⚠️ Failed to create classification: {e.response.text}")
+        print(f"Failed to create classification: {e.response.text}")
         return False
 
 
@@ -214,18 +213,17 @@ def create_tag_if_not_exists(token, tag_name):
         if response.status_code in (200, 201, 409):
             return f"{classification_name}.{clean_tag}"
             
-        print(f"⚠️ Unexpected response creating tag: {response.text}")
+        print(f"Unexpected response creating tag: {response.text}")
         return None
         
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 409:  # Already exists
             return f"{classification_name}.{clean_tag}"
-        print(f"⚠️ Failed to create tag: {e.response.text}")
+        print(f"Failed to create tag: {e.response.text}")
         return None
 
 
 def create_table(token, team_id, dataset_meta, resource):
-    """Create table with Group team ownership - minimal 1.6.8 compatible version"""
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     
     # Generate safe table name
@@ -253,7 +251,7 @@ def create_table(token, team_id, dataset_meta, resource):
     try:
         response = requests.post(TABLES_URL, headers=headers, json=table_data)
         response.raise_for_status()
-        print(f"✅ Created table: {table_name}")
+        print(f"Created table: {table_name}")
         return response.json()
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 409:
@@ -263,14 +261,12 @@ def create_table(token, team_id, dataset_meta, resource):
         raise
 
 def search_datasets(query: str, max_results: int = 10):
-    """Search CKAN for datasets"""
     url = f"{DATA_GOV_API}/action/package_search?q={quote(query)}&rows={max_results}"
     response = requests.get(url)
     response.raise_for_status()
     return response.json()["result"]["results"]
 
-def process_datasets(token, group_team_id):
-    """Main processing workflow - simplified for 1.6.8"""
+def process_datasets(token, group_team_id):   # main function
     query = input("Make a query to search datasets: ")
     max_results = int(input("How many datasets do you want? "))
     datasets = search_datasets(query, max_results)
@@ -278,19 +274,14 @@ def process_datasets(token, group_team_id):
     total_created = 0
     total_skipped = 0
     
-    for dataset in datasets:
-        dataset_id = dataset["id"]
-        print(f"\nProcessing dataset: {dataset['title']} (ID: {dataset_id})")
+    for dataset_meta in datasets:
+        print(f"\nProcessing dataset: {dataset_meta['title']} (ID: {dataset_meta["id"]})")
         created = 0
         skipped = 0
-        
         try:
-            dataset_meta = get_dataset_metadata(dataset_id)
-            
             for resource in dataset_meta.get("resources", []):
                 if not resource.get("url"):
                     continue
-                
                 print(f"\nProcessing resource: {resource.get('name', resource['id'])}")
                 print(f"Format: {resource.get('format')}")
                 print(f"URL: {resource['url']}")
@@ -308,13 +299,13 @@ def process_datasets(token, group_team_id):
                     print(f"Error creating table: {str(e)}")
                     skipped += 1
             
-            print(f"\nSummary for {dataset['title']}:")
+            print(f"\nSummary for {dataset_meta['title']}:")
             print(f"Created {created} new tables, skipped {skipped} existing tables")
             total_created += created
             total_skipped += skipped
             
         except Exception as e:
-            print(f"Error processing dataset {dataset_id}: {str(e)}")
+            print(f"Error processing dataset {dataset_meta["id"]}: {str(e)}")
             continue
     
     print(f"\nProcessing complete. Total created: {total_created}, Total skipped: {total_skipped}")
@@ -332,5 +323,5 @@ if __name__ == "__main__":
         process_datasets(token, group_team_id)
         
     except Exception as e:
-        print(f"\n🚨 Fatal error: {str(e)}")
+        print(f"\nError: {str(e)}")
         
