@@ -124,7 +124,7 @@ def main():  # fancy way to search for datasets
     
     print(f"\nFound {len(tables)} tables:")
     for idx, table in enumerate(tables, 1):
-        print(f"{idx}. {table['_source']['fullyQualifiedName']}")
+        print(f"{idx}. {table['_source']['displayName']}")
     
     # Let user select a table for detailed view
     selection = input("\nEnter table number for details (0 for all, Enter to exit): ")
