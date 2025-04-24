@@ -13,7 +13,7 @@ def dcat_to_openmetadata(dcat_dataset: dict, openmetadata_url: str, token: str) 
     fqn = dcat_dataset["dct:identifier"]
     fqn_parts = fqn.split(".")
     if len(fqn_parts) != 4:
-        raise ValueError("FQN inválido. Esperado formato: service.database.schema.table")
+        raise ValueError("FQN inválido. Formato esperado: service.database.schema.table")
 
     service_name, database_name, schema_name, table_name = fqn_parts
 

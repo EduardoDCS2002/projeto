@@ -168,7 +168,7 @@ def create_classification_if_not_exists(token, classification_name="Classificati
     except requests.exceptions.HTTPError:
         pass
     
-    # Create if it doesn't exist - simplified for 1.6.8
+    # Create if it doesn't exist
     try:
         response = requests.post(
             f"{OPENMETADATA_URL}/classifications",
@@ -176,15 +176,12 @@ def create_classification_if_not_exists(token, classification_name="Classificati
             json={
                 "name": classification_name,
                 "description": "Default classification for imported tags",
-                # Removed categoryType as it's not needed in 1.6.8
-                "mutuallyExclusive": False  # This is important for 1.6.8
+                "categoryType": "CLASSIFICATION"
             }
         )
         response.raise_for_status()
         return True
     except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 409:  # Already exists
-            return True
         print(f"Failed to create classification: {e.response.text}")
         return False
 
@@ -201,34 +198,28 @@ def create_tag_if_not_exists(token, tag_name):
     # Clean the tag name
     clean_tag = slugify(tag_name, separator="_")
     
-    # Check if tag already exists
     try:
-        response = requests.get(
-            f"{OPENMETADATA_URL}/tags/{classification_name}.{clean_tag}",
-            headers=headers
-        )
-        if response.status_code == 200:
-            return f"{classification_name}.{clean_tag}"
-    except requests.exceptions.HTTPError:
-        pass
-    
-    # Create the tag if it doesn't exist
-    try:
+        # Try to create the tag
         response = requests.post(
             f"{OPENMETADATA_URL}/tags",
             headers=headers,
             json={
                 "name": clean_tag,
-                "description": f"Tag for {tag_name}",
+                "description": f"Tag for {clean_tag}",
                 "classification": classification_name
             }
         )
-        response.raise_for_status()
-        return f"{classification_name}.{clean_tag}"
+        
+        if response.status_code in (200, 201, 409):
+            return f"{classification_name}.{clean_tag}"
+            
+        print(f"Unexpected response creating tag: {response.text}")
+        return None
+        
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 409:  # Already exists
             return f"{classification_name}.{clean_tag}"
-        print(f"Failed to create tag {clean_tag}: {e.response.text}")
+        print(f"Failed to create tag: {e.response.text}")
         return None
 
 
@@ -239,30 +230,7 @@ def create_table(token, team_id, dataset_meta, resource):
     table_name = slugify(f"{dataset_meta['name']}_{resource['id'][:8]}", separator="_")[:64]
     ckan_org = dataset_meta.get("organization", {})
     
-    # Prepare tags - only create them once per dataset
-    tags = []
-    
-    # Add organization as a tag if available
-    if ckan_org.get("name"):
-        org_tag = create_tag_if_not_exists(token, ckan_org["name"])
-        if org_tag:
-            tags.append({"tagFQN": org_tag})
-    
-    # Add dataset tags (only if they don't already exist)
-    for tag in dataset_meta.get("tags", []):
-        tag_name = tag.get("name", "").strip()
-        if tag_name:  # Only process if we have a valid tag name
-            tag_fqn = create_tag_if_not_exists(token, tag_name)
-            if tag_fqn:
-                tags.append({"tagFQN": tag_fqn})
-    
-    # Add resource format as a tag
-    if resource.get("format"):
-        format_tag = create_tag_if_not_exists(token, resource["format"])
-        if format_tag:
-            tags.append({"tagFQN": format_tag})
-    
-    # Construct table payload
+    # Construct basic table payload (without tags or extensions)
     table_data = {
         "name": table_name,
         "displayName": f"{dataset_meta['title'][:64]} - {resource.get('name', resource['format'])[:32]}",
@@ -271,8 +239,7 @@ def create_table(token, team_id, dataset_meta, resource):
         "sourceUrl": resource["url"],
         "columns": detect_schema(resource),
         "databaseSchema": "data_gov_service.external_datasets.data_gov",
-        "owners": [{"id": team_id, "type": "team"}],
-        "tags": tags if tags else None  # Only include tags if we have any
+        "owners": [{"id": team_id, "type": "team"}]
     }
     
     # Add publisher info to description if available
