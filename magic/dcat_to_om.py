@@ -1,3 +1,5 @@
+import requests
+
 def dcat_to_openmetadata(dcat_dataset: dict, openmetadata_url: str, token: str) -> dict:
     """
     Cria ou atualiza uma tabela no OpenMetadata a partir de um DCAT JSON-LD.

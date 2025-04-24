@@ -1,3 +1,5 @@
+import requests
+
 def dcat_to_ckan(dcat_dataset: dict, ckan_url: str, api_key: str) -> dict:
     """
     Cria ou atualiza um dataset CKAN a partir de um DCAT JSON-LD, com fidelidade total.
