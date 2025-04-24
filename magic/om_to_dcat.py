@@ -1,32 +1,33 @@
 def openmetadata_to_dcat(table: dict) -> dict:
     """
-    Converte um dataset do OpenMetadata para um objeto JSON-LD baseado no DCAT,
-    incluindo extensões para preservar informações ricas.
+    Converte uma tabela do OpenMetadata em um DCAT JSON-LD completo.
+    Preserva colunas, tags, dono, perfil, uso, etc.
     """
     dcat = {
         "@context": "https://www.w3.org/ns/dcat.jsonld",
         "@type": "dcat:Dataset",
+        "dct:identifier": table.get("fullyQualifiedName"),
         "dct:title": table.get("name"),
         "dct:description": table.get("description"),
-        "dct:identifier": table.get("fullyQualifiedName"),
+        "dct:issued": table.get("createdAt"),
+        "dct:modified": table.get("updatedAt"),
+        "dcat:keyword": [tag["tagFQN"] for tag in table.get("tags", [])],
         "dct:publisher": {
             "@type": "foaf:Agent",
             "foaf:name": table.get("owner", {}).get("displayName") or table.get("owner", {}).get("name")
         } if table.get("owner") else None,
-        "dcat:keyword": [tag["tagFQN"] for tag in table.get("tags", [])],
-        "dct:issued": table.get("createdAt"),
-        "dct:modified": table.get("updatedAt"),
-        "dcat:distribution": [],
-        "om:columns": table.get("columns", []),  # Extensão para manter colunas
+        "om:columns": table.get("columns", []),
         "om:tableType": table.get("tableType"),
-        "om:service": table.get("service", {}).get("name"),
+        "om:profile": table.get("profile"),
+        "om:usageSummary": table.get("usageSummary"),
         "om:database": table.get("database", {}).get("name"),
         "om:schema": table.get("databaseSchema", {}).get("name"),
-        "om:usageSummary": table.get("usageSummary"),
-        "om:profile": table.get("profile")
+        "om:service": table.get("service", {}).get("name"),
+        "om:serviceType": table.get("serviceType"),
+        "om:fullyQualifiedName": table.get("fullyQualifiedName"),
+        "om:sourceUrl": table.get("sourceUrl"),
+        "om:owner": table.get("owner"),
+        "om:id": table.get("id")
     }
 
-    # Remover campos None
-    dcat = {k: v for k, v in dcat.items() if v is not None}
-
-    return dcat
+    return {k: v for k, v in dcat.items() if v is not None}
