@@ -133,15 +133,15 @@ def main():  # fancy way to search for datasets
     
     if selection == "0":
         for table in tables:
-            if details := get_table_details(TOKEN, table['_source']['fullyQualifiedName']):
-                print_table_details(details)
+            print("-"*100)
+            print(json.dumps(table["_source"], indent=2))
+            print("-"*100)
     else:
         try:
             idx = int(selection) - 1
             if 0 <= idx < len(tables):
-                table = tables[idx]
-                if details := get_table_details(TOKEN, table['_source']['fullyQualifiedName']):
-                    print_table_details(details)
+                table = tables[idx]["_source"]
+                print(json.dumps(table, indent=2))
             else:
                 print("Invalid selection")
         except ValueError:

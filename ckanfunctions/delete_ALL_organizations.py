@@ -63,7 +63,7 @@ def delete_dataset(ckan_url, dataset_id_or_name, api_key):
             time.sleep(2)  # Wait before retrying
 
 def get_all_organizations():
-    # Get all organizations including deleted ones
+    # Get all organizations including deleted ones that are hidden
     endpoint = urljoin(CKAN_URL, "api/3/action/organization_list")
     
     try:
@@ -159,4 +159,6 @@ def purge_all_organizations():
     return results
 
 if __name__ == "__main__":
-    purge_all_organizations()
+    confirm = input("Write anything to confirm deletion: ")
+    if confirm != "":
+        purge_all_organizations()
