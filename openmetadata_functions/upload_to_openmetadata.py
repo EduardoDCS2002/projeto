@@ -1,7 +1,6 @@
 import requests
 import base64
 from urllib.parse import quote
-from slugify import slugify
 import time
 
 DATA_GOV_API = "https://catalog.data.gov/api/3"
