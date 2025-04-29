@@ -1,4 +1,4 @@
-CKAN (with DCAT Extension),DCAT (Standard),OpenMetadata
+CKAN Field,DCAT Field,OpenMetadata Field
 title,title,name
 notes,description,description
 name,identifier,fullyQualifiedName
@@ -16,19 +16,9 @@ extras.language,language,language
 url,accessURL,sourceUrl
 extras.license_url,license,license
 type,,entityType
-extras.contact_point,contactPoint,owner
-extras.frequency,accrualPeriodicity,updateFrequency
-extras.theme,theme,domain
-extras.dataset_reference_date,temporal,timeline
-extras.granularity,,tier
-extras.data_quality,,quality
-extras.conforms_to,conformsTo,standards
-
-# Organization-specific fields
 organization.name,publisher.name,owner.name
 organization.title,publisher.name,owner.displayName
 organization.description,publisher.description,owner.description
-organization.image_url,,owner.profileImage
-organization.created,,owner.createdAt
-organization.state,,owner.status
-organization.approval_status,,owner.status
+maintainer,,contact
+maintainer_email,,contact.email
+license_title,license,license.displayName
