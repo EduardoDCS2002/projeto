@@ -1,0 +1,34 @@
+CKAN (with DCAT Extension),DCAT (Standard),OpenMetadata
+title,title,name
+notes,description,description
+name,identifier,fullyQualifiedName
+owner_org,publisher,owner
+author,creator,author
+metadata_created,issued,createdAt
+metadata_modified,modified,updatedAt
+resources,distribution,dataAssets
+tags,keyword,tags
+groups,theme,domain
+extras.rights,rights,license
+extras.spatial,spatial,location
+extras.temporal,temporal,timeline
+extras.language,language,language
+url,accessURL,sourceUrl
+extras.license_url,license,license
+type,,entityType
+extras.contact_point,contactPoint,owner
+extras.frequency,accrualPeriodicity,updateFrequency
+extras.theme,theme,domain
+extras.dataset_reference_date,temporal,timeline
+extras.granularity,,tier
+extras.data_quality,,quality
+extras.conforms_to,conformsTo,standards
+
+# Organization-specific fields
+organization.name,publisher.name,owner.name
+organization.title,publisher.name,owner.displayName
+organization.description,publisher.description,owner.description
+organization.image_url,,owner.profileImage
+organization.created,,owner.createdAt
+organization.state,,owner.status
+organization.approval_status,,owner.status

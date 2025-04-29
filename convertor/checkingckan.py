@@ -75,8 +75,8 @@ datasets = get_all_datasets_from_ckan(CKAN_URL, API_KEY)
 for org, datasets in datasets.items():
     print(f"Organization: {org}")
     for dataset in datasets:
-        print(f"  Dataset: {dataset["name"]}")
-        dataset_info = gets_one_dataset_from_datagov(dataset["name"], DATA_GOV_API)
+        print(f"  Dataset:\n {dataset}")
+        """dataset_info = gets_one_dataset_from_datagov(dataset["name"], DATA_GOV_API)
         if dataset_info:
             differences = compare_two_datasets(dataset, dataset_info)
             if differences:
@@ -85,4 +85,4 @@ for org, datasets in datasets.items():
                 print("    No differences found.")
         else:
             print("    Dataset not found in data.gov.")
-        
+        """
