@@ -2,10 +2,11 @@ import requests
 CKAN_URL = "http://localhost:5000/api/3/action/"
 API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJtSDF4V2pmQkEtMXRJZXNMRGZTaEk4U0dPX0JfdEtaVi1jSHBIeVJfcTJRIiwiaWF0IjoxNzQ0Mjk4MTIyfQ.7yBFMAk28YDFdq39PHnHPPJDaQxtRWxmKsiU0p4x6cc"
 DATA_GOV_API = "https://catalog.data.gov/api/3/action/"
+
 def get_all_datasets_from_ckan(base_url, api_key):
     """
-    Only needs your ckan url and your api key.
-    Returns a dictionary where keys are organization names and values are lists of datasets.
+    Gets all datasets with full details including resources from a CKAN instance.
+    Returns a dictionary where keys are organization names and values are lists of full datasets.
     """
     headers = {"Authorization": api_key}
     datasets_by_org = {}
@@ -18,13 +19,27 @@ def get_all_datasets_from_ckan(base_url, api_key):
 
     # Get datasets for each organization
     for org in organizations:
-        org_datasets_url = f"{base_url}organization_show"
-        params = {"id": org, "include_datasets": True}
-        org_response = requests.get(org_datasets_url, headers=headers, params=params)
-        org_response.raise_for_status()
-        org_data = org_response.json().get("result", {})
-        datasets = org_data.get("packages", [])
-        datasets_by_org[org] = datasets
+        # First get the list of dataset IDs/names for this org
+        org_packages_url = f"{base_url}package_search"
+        params = {
+            "q": f"organization:{org}",
+            "rows": 1000,  # Get as many as possible in one request
+            "fl": "id,name"  # Only get id and name to minimize response size
+        }
+        search_response = requests.get(org_packages_url, headers=headers, params=params)
+        search_response.raise_for_status()
+        datasets_list = search_response.json().get("result", {}).get("results", [])
+        
+        # Now get full details for each dataset
+        full_datasets = []
+        for dataset in datasets_list:
+            dataset_url = f"{base_url}package_show"
+            params = {"id": dataset['id']}
+            dataset_response = requests.get(dataset_url, headers=headers, params=params)
+            dataset_response.raise_for_status()
+            full_datasets.append(dataset_response.json().get("result", {}))
+            
+        datasets_by_org[org] = full_datasets
 
     return datasets_by_org
 
@@ -71,18 +86,25 @@ def compare_two_datasets(ckan_dataset, datagov_dataset):
     
     return differences
 
-datasets = get_all_datasets_from_ckan(CKAN_URL, API_KEY)
-for org, datasets in datasets.items():
-    print(f"Organization: {org}")
-    for dataset in datasets:
-        print(f"  Dataset:\n {dataset}")
-        """dataset_info = gets_one_dataset_from_datagov(dataset["name"], DATA_GOV_API)
-        if dataset_info:
-            differences = compare_two_datasets(dataset, dataset_info)
-            if differences:
-                print(f"    Differences: {differences}")
-            else:
-                print("    No differences found.")
-        else:
-            print("    Dataset not found in data.gov.")
-        """
+
+if(__name__ == "__main__"):
+    datasets = get_all_datasets_from_ckan(CKAN_URL, API_KEY)
+    for org, datasets in datasets.items():
+        print(f"Organization: {org} ({len(datasets)} datasets)")
+        for dataset in datasets:
+            print(f"Dataset: {dataset['title']} ({dataset['name']})")
+            """
+            for argument in dataset:
+                if(argument=="organization"):
+                    print(f"{argument}:")
+                    for key in dataset[argument]:
+                        print(f"    {key}: {dataset[argument][key]}")
+                elif(argument=="extras" or argument=="resources" or argument=="tags"):
+                    print(f"{argument}:")
+                    for key in dataset[argument]:
+                        print(f"        {key}\n")
+                else:
+                    print(f"{argument}: {dataset[argument]}")
+            
+            """
+            print(dataset)

@@ -1,55 +1,32 @@
-from checkingckan import get_all_datasets_from_ckan, CKAN_URL, API_KEY
-from checkopenmetadata import get_table_details, search_tables, TOKEN, OPENMETADATA_URL
-from magic import ckan_to_dcat, dcat_to_ckan, openmetadata_to_dcat, dcat_to_openmetadata
-import json
-
-def export_ckan_to_dcat():
-    datasets = get_all_datasets_from_ckan(CKAN_URL, API_KEY)
-    for org, dsets in datasets.items():
-        for ds in dsets:
-            dcat = ckan_to_dcat(ds)
-            print(json.dumps(dcat, indent=2))
-
-def import_dcat_to_ckan():
-    filename = input("Path to the .jsonld file: ")
-    with open(filename) as f:
-        dcat = json.load(f)
-    result = dcat_to_ckan(dcat, CKAN_URL, API_KEY)
-    print("Successfully imported into CKAN:", result["name"])
-
-def export_openmetadata_to_dcat():
-    query = input("Enter the table FQN (e.g., my_service.my_db.my_schema.my_table): ")
-    table = get_table_details(TOKEN, query)
-    if not table:
-        print("Table not found.")
-        return
-    dcat = openmetadata_to_dcat(table)
-    print(json.dumps(dcat, indent=2))
-
-def import_dcat_to_openmetadata():
-    filename = input("Path to the .jsonld file: ")
-    with open(filename) as f:
-        dcat = json.load(f)
-    result = dcat_to_openmetadata(dcat, OPENMETADATA_URL, TOKEN)
-    print("Successfully imported into OpenMetadata:", result["name"])
+import upload_dataset
+import om_to_ckan
+import ckan_to_om
+import upload_to_openmetadata
 
 def main():
     print("""
-[1] Export from CKAN to DCAT (print as JSON)
-[2] Import DCAT JSON into CKAN
-[3] Export from OpenMetadata to DCAT (print as JSON)
-[4] Import DCAT JSON into OpenMetadata
+[1] Syncronize ckan with openmetadata (import from openmetadata to ckan)
+[2] Syncronize openmetadata with ckan (import from ckan to openmetadata)
+[3] Update datasets to ckan from datagov
+[4] Update datasets to openmetadata from datagov
 [5] Exit
 """)
     option = input("Select an option: ")
     if option == "1":
-        export_ckan_to_dcat()
+        om_to_ckan.om_to_ckan()
     elif option == "2":
-        import_dcat_to_ckan()
+        ckan_to_om.ckan_to_om()
     elif option == "3":
-        export_openmetadata_to_dcat()
+        query = input("Enter search query (or press Enter for all datasets): ").strip()
+        limit = input("Enter maximum datasets to sync (default 20): ").strip()
+
+        upload_dataset.sync_all_from_datagov(
+            query=query if query else "",
+            limit=int(limit) if limit.isdigit() else 20
+        )
     elif option == "4":
-        import_dcat_to_openmetadata()
+        token = upload_to_openmetadata.get_auth_token()
+        upload_to_openmetadata.process_datasets(token)
     elif option == "5":
         print("Goodbye!")
     else:

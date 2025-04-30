@@ -15,10 +15,30 @@ extras.temporal,temporal,timeline
 extras.language,language,language
 url,accessURL,sourceUrl
 extras.license_url,license,license
-type,,entityType
 organization.name,publisher.name,owner.name
 organization.title,publisher.name,owner.displayName
 organization.description,publisher.description,owner.description
-maintainer,,contact
+maintainer,maintainer,contact
 maintainer_email,,contact.email
 license_title,license,license.displayName
+
+
+PARA MANDAR PARA O OPENMETADATA NÃO PRECISAMOS DE:
+tableType
+owners
+dataType
+dataTypeDisplay
+classification
+provider
+nada do service
+
+
+PARA MANDAR PARA O CKAN NÃO PRECISAMOS DE:
+state
+id
+metadata_created
+metadata_modified
+revision_id
+creator user id
+private
+status
