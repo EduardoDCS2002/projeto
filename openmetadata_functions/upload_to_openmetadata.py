@@ -39,12 +39,12 @@ def get_auth_token():
     return response.json()["accessToken"]
 
 def setup_infrastructure(token):
-    """Set up required services, databases, and schemas"""
+    """Set up required services and databases"""
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     
     # 1. Datalake Service
     service_data = {
-        "name": "data_gov_service",
+        "name": "service",
         "serviceType": "Datalake",
         "connection": {
             "config": {
@@ -56,7 +56,7 @@ def setup_infrastructure(token):
                         "awsRegion": "us-east-1"
                     }
                 },
-                "bucketName": "external_datasets"
+                "bucketName": "organizations"
             }
         }
     }
@@ -74,7 +74,7 @@ def setup_infrastructure(token):
         requests.post(
             DATABASES_URL,
             headers=headers,
-            json={"name": "external_datasets", "service": "data_gov_service"}
+            json={"name": "organizations", "service": "service"}
         )
         print("Created database")
     except requests.exceptions.HTTPError as e:
@@ -82,18 +82,93 @@ def setup_infrastructure(token):
             raise
         print("Database already exists")
 
-    # 3. Schema
+def create_property_definition(property_name, property_type, description):
+    headers = {
+        "Authorization": f"Bearer {get_auth_token()}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "name": property_name,
+        "description": description,
+        "propertyType": {
+            "id": property_type.lower(),
+            "type": "type",
+            "name": property_type
+        },
+        "entityType": "databaseSchema"
+    }
+    
     try:
-        requests.post(
-            SCHEMAS_URL,
+        response = requests.post(
+            f"{OPENMETADATA_URL}/metadata/schema/fields",
             headers=headers,
-            json={"name": "data_gov", "database": "data_gov_service.external_datasets"}
+            json=payload
         )
-        print("Created schema")
+        response.raise_for_status()
     except requests.exceptions.HTTPError as e:
-        if e.response.status_code != 409:
+        if e.response.status_code == 409:  # 409 means already exists
             raise
-        print("Schema already exists")
+
+def create_and_apply_schema_property(schema_fqn, property_name, property_value, property_type="STRING", description=""):
+    # First create the property definition (if it doesn't exist)
+    create_property_definition(property_name, property_type, description)
+    
+    # Then apply to specific schema
+    headers = {
+        "Authorization": f"Bearer {get_auth_token()}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "extension": {
+            property_name: property_value
+        }
+    }
+    
+    response = requests.patch(
+        f"{OPENMETADATA_URL}/databaseSchemas/name/{schema_fqn}",
+        headers=headers,
+        json=payload
+    )
+    response.raise_for_status()
+    return response.json()
+
+def get_or_create_schema(token, organization):
+    """Get or create a schema based on the organization"""
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    
+    if not organization:
+        # If no organization, use a default schema
+        org_name = "no_organization"
+    else:
+        org_name = clean_name(organization.get("name", "no_organization"))
+    
+    schema_fqn = f"service.organizations.{org_name}"
+    
+    try:
+        # Check if schema exists
+        response = requests.get(
+            f"{SCHEMAS_URL}/name/{schema_fqn}",
+            headers=headers
+        )
+        if response.status_code == 200:
+            return org_name
+        
+        # Create new schema
+        schema_data = {
+            "name": org_name,
+            "database": "service.organizations",
+            "description": organization.get("description", f"Organization {org_name}")
+        }
+        response = requests.post(SCHEMAS_URL, headers=headers, json=schema_data)
+        response.raise_for_status()
+        return org_name
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 409:  # Already exists
+            return org_name
+        print(f"Failed to create schema: {str(e)}")
+        raise
 
 def get_dataset_metadata(dataset_id):
     """Get dataset metadata from CKAN"""
@@ -145,10 +220,7 @@ def create_tag_if_not_exists(token, tag, category="Classification", default_desc
                 print(f"Error creating tag: {e.response.text}")
                 raise
                 
-
     return f"{category}.{tag_name}"
-
-
 
 def create_resource_columns(token, resources):
     """Create columns for each resource while preserving original names"""
@@ -214,24 +286,20 @@ def create_dataset_table(token, dataset_meta):
         "Content-Type": "application/json"
     }
     team_id = get_or_create_team(token)
-    table_name = clean_name(dataset_meta["name"])
+    
+    schema_name = get_or_create_schema(token, dataset_meta.get("organization"))
+    
+    #org_name = clean_name(dataset_meta.get("organization").get("name", "no_organization"))       trying to keep the image_url, for some reason didnt work
+    #schema_fqn = f"service.organizations.{org_name}"                                              
+    #create_and_apply_schema_property(schema_fqn, "image_url", dataset_meta.get("organization").get("image_url"),"STRING", "image url of the organization")
 
+
+    table_name = clean_name(dataset_meta["name"])
     display_name = dataset_meta['title'][:128]
 
     # Get the dataset description and append organization details to it
     description = dataset_meta.get("notes", "No description provided")
     
-    if dataset_meta.get("organization"):
-        org = dataset_meta["organization"]
-        organization_info = (
-            f"\n\n---\nOrganization Information:\n"
-            f"Name: {org.get('name')}\n"
-            f"Description: {org.get('description', 'No description available')}\n"
-            f"Contact: {org.get('contact', 'No contact information available')}\n"
-            f"URL: {org.get('url', 'No URL available')}\n"
-        )
-        description += organization_info  # Append organization info to description because doing it in the tags wasnt possible
-
     # Prepare tags
     tags = []
     for tag in dataset_meta.get("tags", []):
@@ -243,10 +311,10 @@ def create_dataset_table(token, dataset_meta):
     table_data = {
         "name": table_name,
         "displayName": display_name,
-        "description": description,  # Updated description with organization info
+        "description": description,
         "tableType": "External",
         "columns": create_resource_columns(token, dataset_meta.get("resources", [])),
-        "databaseSchema": "data_gov_service.external_datasets.data_gov",
+        "databaseSchema": f"service.organizations.{schema_name}",
         "owners": [{"id": team_id, "type": "team"}],
         "tags": tags if tags else None
     }
@@ -254,7 +322,7 @@ def create_dataset_table(token, dataset_meta):
     try:
         response = requests.post(TABLES_URL, headers=headers, json=table_data)
         response.raise_for_status()
-        print(f"Created table for dataset: {display_name}")
+        print(f"Created table for dataset: {display_name} in schema: {schema_name}")
         return response.json()
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 409:

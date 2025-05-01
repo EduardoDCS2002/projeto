@@ -34,7 +34,7 @@ def ckan_to_om():
         for dataset in dsets:
             dcat = convertors.ckan_to_my_dcat(dataset)
             try:
-                upload_to_openmetadata.create_dataset_table(TOKEN, dataset)
+                upload_to_openmetadata.create_dataset_table(TOKEN, dcat)
                 results["created"] += 1
             except Exception as e:
                 if "Table exists" in str(e):

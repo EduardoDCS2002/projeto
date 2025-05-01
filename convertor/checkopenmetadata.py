@@ -1,151 +1,90 @@
 import requests
-import json
 import base64
-from typing import List, Dict, Optional
 
 OPENMETADATA_URL = "http://localhost:8585/api/v1"
-LOGIN_URL = f"{OPENMETADATA_URL}/users/login"
 
-def get_auth_token() -> str:
-    """Authenticate and return access token"""
+# API Endpoints
+LOGIN_URL = f"{OPENMETADATA_URL}/users/login"
+SCHEMAS_URL = f"{OPENMETADATA_URL}/databaseSchemas"
+TABLES_URL = f"{OPENMETADATA_URL}/tables"
+
+def get_auth_token():
+    """Get OpenMetadata auth token"""
     headers = {"Content-Type": "application/json"}
-    encoded_password = base64.b64encode("admin".encode('utf-8')).decode('utf-8')
-    payload = {
-        "email": "admin@open-metadata.org",
-        "password": encoded_password
-    }
-    response = requests.post(LOGIN_URL, headers=headers, json=payload)
+    response = requests.post(
+        LOGIN_URL,
+        headers=headers,
+        json={
+            "email": "admin@open-metadata.org",
+            "password": base64.b64encode("admin".encode()).decode()
+        }
+    )
     response.raise_for_status()
     return response.json()["accessToken"]
 
-TOKEN = get_auth_token()
-
-def search_tables(
-    token: str,
-    query: str = "*",
-    service_name: Optional[str] = None,
-    database_name: Optional[str] = None,
-    schema_name: Optional[str] = None,
-    limit: int = 50
-) -> List[Dict]:
-    """Search for tables in OpenMetadata with optional filters"""
-    endpoint = f"{OPENMETADATA_URL}/search/query"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
+def get_all_schemas(token):
+    """Get all schemas from the organizations database"""
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    # Get all schemas under the 'service.organizations' database
+    params = {
+        "database": "service.organizations",
+        "limit": 1000  # Adjust if you have more than 1000 schemas
     }
     
-    # Build query string with filters
-    query_parts = [query]
-    if service_name:
-        query_parts.append(f"service.name:{service_name}")
-    if database_name:
-        query_parts.append(f"database.name:{database_name}")
-    if schema_name:
-        query_parts.append(f"databaseSchema.name:{schema_name}")
+    response = requests.get(SCHEMAS_URL, headers=headers, params=params)
+    response.raise_for_status()
+    
+    return response.json().get("data", [])
+
+def get_tables_for_schema(token, schema_fqn):
+    """Get all tables for a specific schema"""
+    headers = {"Authorization": f"Bearer {token}"}
     
     params = {
-        "q": " AND ".join(query_parts),
-        "entityType": "table",
-        "from": 0,
-        "size": limit
-    }
-
-    try:
-        response = requests.get(endpoint, headers=headers, params=params)
-        response.raise_for_status()
-        return response.json().get("hits", {}).get("hits", [])
-    except requests.exceptions.HTTPError as e:
-        print(f"Search error: {e.response.text}")
-        return []
-
-def get_table_details(token: str, fqn: str) -> Optional[Dict]:
-    """Get complete details for a specific table"""
-    endpoint = f"{OPENMETADATA_URL}/tables/name/{fqn}"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
+        "databaseSchema": schema_fqn,
+        "limit": 1000  # Adjust if you have more than 1000 tables per schema
     }
     
+    response = requests.get(TABLES_URL, headers=headers, params=params)
+    response.raise_for_status()
+    
+    return response.json().get("data", [])
+
+def get_schema_tables_dict():
+    """Main function that returns a dictionary of schemas with their tables"""
     try:
-        response = requests.get(endpoint, headers=headers, params={"fields": "*"})
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.HTTPError as e:
-        print(f"Error fetching table {fqn}: {e.response.text}")
+        # Authenticate
+        token = get_auth_token()
+        
+        # Get all schemas
+        schemas = get_all_schemas(token)
+        
+        # Create dictionary to store the result
+        schema_tables_dict = {}
+        
+        # Get tables for each schema
+        for schema in schemas:
+            schema_fqn = schema["fullyQualifiedName"]
+            tables = get_tables_for_schema(token, schema_fqn)
+            
+            # Store tables in the dictionary with schema name as key
+            schema_tables_dict[schema_fqn] = tables
+        
+        return tables
+        
+    except Exception as e:
+        print(f"\nError: {str(e)}")
         return None
 
-def print_table_summary(table: Dict) -> None:
-    """Print formatted table summary"""
-    source = table.get("_source", {})
-    
-    print(f"\n{'='*50}")
-    print(f"Table: {source.get('name')}")
-    print(f"FQN: {source.get('fullyQualifiedName')}")
-    print(f"Type: {source.get('tableType', 'Unknown')}")
-    
-    if source.get('description'):
-        print(f"\nDescription: {source['description'][:200]}...")
-    
-    if source.get('tags'):
-        print("\nTags:")
-        for tag in source['tags']:
-            print(f" - {tag.get('tagFQN')}")
-    
-    if source.get('columns'):
-        print("\nColumns:")
-        for col in source['columns']:
-            print(f" - {col.get('name')} ({col.get('dataType')}): {col.get('description', 'No description')[:50]}")
-
-def print_table_details(table: Dict) -> None:
-    """Print complete table details"""
-    print("\nComplete Metadata:")
-    print(json.dumps(table, indent=2))
-
-def main():  # fancy way to search for datasets
-    # Get search parameters from user
-    search_query = input("Enter search query (leave blank for all tables): ") or "*"
-    service_filter = input("Filter by service name (leave blank for all): ") or None
-    database_filter = input("Filter by database name (leave blank for all): ") or None
-    schema_filter = input("Filter by schema name (leave blank for all): ") or None
-    
-    # Search for tables
-    tables = search_tables(
-        TOKEN,
-        query=search_query,
-        service_name=service_filter,
-        database_name=database_filter,
-        schema_name=schema_filter
-    )
-    
-    if not tables:
-        print("\nNo tables found matching your criteria")
-        return
-    
-    print(f"\nFound {len(tables)} tables:")
-    for idx, table in enumerate(tables, 1):
-        print(f"{idx}. {table['_source']['displayName']}")
-    
-    # Let user select a table for detailed view
-    selection = input("\nEnter table number for details (0 for all, Enter to exit): ")
-    if not selection:
-        return
-    
-    if selection == "0":
-        for table in tables:
-            print("-"*100)
-            print(json.dumps(table["_source"], indent=2))
-            print("-"*100)
-    else:
-        try:
-            idx = int(selection) - 1
-            if 0 <= idx < len(tables):
-                table = tables[idx]["_source"]
-                print(json.dumps(table, indent=2))
-            else:
-                print("Invalid selection")
-        except ValueError:
-            print("Please enter a valid number")
-
 if __name__ == "__main__":
-    main()
+    result = get_schema_tables_dict()
+    
+    if result:
+        # Print the results
+        print("Schema and Tables Dictionary:")
+        print("=" * 50)
+        for table in result:
+            print(table)
+    else:
+        print("Failed to retrieve schema and table information.")

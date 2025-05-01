@@ -27,31 +27,11 @@ def get_auth_token():
 TOKEN = get_auth_token()
 
 def om_to_ckan():
-    search_query = input("Enter search query (leave blank for all tables): ") or "*"
-    service_filter = input("Filter by service name (leave blank for all): ") or None
-    database_filter = input("Filter by database name (leave blank for all): ") or None
-    schema_filter = input("Filter by schema name (leave blank for all): ") or None
     
-    # Search for tables
-    tables = checkopenmetadata.search_tables(
-        TOKEN,
-        query=search_query,
-        service_name=service_filter,
-        database_name=database_filter,
-        schema_name=schema_filter
-    )
+    tables = checkopenmetadata.get_schema_tables_dict()
     for table in tables:
-        my_dcat = convertors.openmetadata_to_my_dcat(table.get("_source"))
+        my_dcat = convertors.openmetadata_to_my_dcat(table)
         
-        if my_dcat['name'] == 'dim_address' or my_dcat["url"] == "Not Existent":
-            continue
-        org_info = {
-        'name': "openmetadatadatasets",
-        'description': "Datasets imported from openmetadata",
-        'contact': "Not necessary",
-        'url': "http://localhost:5000/organization/"
-        }
-        my_dcat["organization"] = org_info    
         results = upload_dataset.sync_dataset(my_dcat, CKAN_URL, API_KEY)
         print(results)
 
